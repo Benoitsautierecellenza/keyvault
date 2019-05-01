@@ -94,7 +94,7 @@
       "name": "[variables('DataDisk1Name')]",
       "location": "[resourceGroup().location]",
       "tags": {
-        "Service": "[Variables('ServiceType')]",
+        "Service": "[variables('ServiceType')]",
         "Expiration": "[parameters('Expiration')]"
       },
       "sku": {
@@ -113,7 +113,7 @@
     "name": "[variables('nicName')]",
     "location": "[resourceGroup().location]",
     "tags": {
-      "Service": "[Variables('ServiceType')]",
+      "Service": "[variables('ServiceType')]",
       "Expiration": "[parameters('Expiration')]"
     },
     "properties": {
@@ -123,7 +123,7 @@
           "properties": {
             "privateIPAllocationMethod": "Dynamic",
             "subnet": {
-              "id": "[Variables('subnetRef')]"
+              "id": "[variables('subnetRef')]"
             }
           }
         }
@@ -136,7 +136,7 @@
     "name": "[parameters('vmNamePrefix')]",
     "location": "[resourceGroup().location]",
     "tags": {
-      "Service": "[Variables('ServiceType')]",
+      "Service": "[variables('ServiceType')]",
       "Expiration": "[parameters('Expiration')]"
     },
     "dependsOn": [
@@ -175,7 +175,7 @@
         ],
         "osDisk": {
           "createOption": "FromImage",
-          "name": "[Variables('OSDiskName')]"
+          "name": "[variables('OSDiskName')]"
         }
       },
       "networkProfile": {
