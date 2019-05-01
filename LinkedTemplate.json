@@ -70,15 +70,7 @@
       "metadata": {
         "description": "Tag to be used to set an expiration date on the resource."
       }
-    },
-    "KeyVaultSecretURI":{
-      "type": "string",
-      "defaultValue": "https://mykeyvault992.vault.azure.net/secrets/Secret/425f7d3b91b443a2a6ebad958a49ece5",
-      "metadata": {
-        "description": "Secret to be used for VM password."
-      }
     }
-
   },
   "variables": {
     "imagePublisher": "MicrosoftWindowsDesktop",
