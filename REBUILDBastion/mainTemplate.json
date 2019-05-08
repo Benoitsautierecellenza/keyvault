@@ -1,0 +1,527 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUsername": {
+      "type" : "string",
+      "metadata" : {
+        "description" : "Secret URI for default Windows Admin account"
+      }
+    },
+    "adminPassword": {
+      "type" : "securestring",
+      "metadata" : {
+        "description" : "Secret URI for default Windows Admin password"
+      } 
+    },
+    "windowsOSVersion": {
+      "type": "string",
+      "defaultValue": "rs5-pro",
+      "allowedValues": [
+        "rs5-pro",
+        "rs4-pro",
+        "rs3-pro"
+      ],
+      "metadata": {
+        "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version. Allowed values: rs5-pro."
+      }
+    },
+    "SubnetName": {
+      "type": "string",
+      "defaultValue": "local",
+      "allowedValues": [
+        "spoke",
+        "local"
+      ],
+      "metadata": {
+        "description": "Authorized subnet to be used for virtual machine deployment in Virtual Network. Allowed values : subnet-for-iaas."
+      }
+    },
+    "vmNamePrefix" : {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual machine name to be deployed"
+      }
+    },
+    "vmSize" : {
+      "type" : "string",  
+      "defaultValue": "Standard_D2s_v3",
+      "allowedValues": [
+        "Standard_D4s_v3",
+        "Standard_D8s_v3",
+        "Standard_A2s_v2",
+        "Standard_D2s_v3"
+      ],
+      "metadata": {
+        "description": "Virtual machine size to be deployed (limited to a VM list). Allowed values : Standard_A2_v2, Standard_D4_v3, Standard_D8_v3, Standard_A2_v2, Standard_D2_v3"
+      }
+    },
+    "DiskType": {
+      "type" : "string",
+      "defaultValue": "Premium_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Premium_LRS"
+      ],
+      "metadata": {
+      "description": "Virtual machine disk type (SATA/SSD). Allowed values : Standard_LRS, Premium_LRS"
+      }
+    },
+    "Expiration": {
+      "type": "string",
+      "metadata": {
+        "description": "Tag to be used to set an expiration date on the resource."
+      }
+    },
+    "VMOwner" : {
+      "type": "string",
+      "metadata": {
+        "description": "Email address of the owner of the virtual machine."
+      }
+    },
+    "secretnotbefore": {
+      "type": "string",
+      "defaultValue": "[utcnow()]"
+    },
+    "BastionStartPolicy":{
+      "type": "string",
+      "metadata": {
+        "description": "Tag value for the Bastion Stop policy"
+      }
+    },
+    "BastionStopPolicy":{
+      "type": "string",
+      "metadata": {
+        "description": "Tag value for the Bastion Stop policy"
+      }
+    },
+    "BastionRebuildPolicy":{
+      "type":  "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Tag value for the Bastion Rebuild policy"
+      }
+    },
+    "ServiceType": {
+      "type" : "string",
+      "defaultValue": "Bastion",
+      "metadata": {
+        "description": "Tag value for the Service Type"
+      }
+    },
+    "chocolateypackage":{
+      "type": "string",
+      "metadata": {
+        "description": "VM Custom Script to deploy"
+      }
+    },
+    "SnapshotResourceUri": {
+      "type": "string",
+      "metadata": {
+        "description": "Snapshot Managed Disk URI"
+      }
+    },
+    "SelfStartPolicy": {
+      "type":  "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Self Start Policy Flag with WebHook."
+      }
+    },
+    "SelfStopPolicy": {
+      "type":  "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Self Stop Policy Flag with Webhook."
+      }
+    },
+    "SelfRebootPolicy": {
+      "type":  "string",
+      "defaultValue": "No",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Self Reboot Policy Flag with Webhook"
+      }
+    }
+  },
+  "variables": {
+    "imagePublisher": "MicrosoftWindowsDesktop",
+    "imageOffer": "Windows-10",
+    "nicName": "[concat(Parameters('vmNamePrefix'),'_NIC1')]",
+    "ipconfig1_nic1": "[concat(Variables('nicName'),'_IP1')]",
+    "DataDisk1Size": 64,
+    "OSDiskName": "[concat(Parameters('vmNamePrefix'),'_OSDISK')]",
+    "DataDisk1Name": "[concat(Parameters('vmNamePrefix'),'_DATADISK1')]",
+    "VNETResourfeGroupName": "Spoke01Network",
+    "virtualNetworkName": "Spoke01Network",
+    "vnetID": "[resourceId(variables('VNETResourfeGroupName'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('subnetName'))]",
+    "DataDiskCachingPolicy": "ReadWrite",
+    "KeyVaultInstanceName": "[concat('kv', uniqueString(resourceGroup().id) )]",
+    "ApplianceResourceProviderObjectID": "ade631c4-e620-412f-a77e-f17376cd8cc1",
+    "KeyVaultInstanceSecretUserName": "LocalAdministratorUserName",
+    "KeyVaultInstanceSecretPasswordName": "AdministratorPassword",
+    "KeyVaultInstanceSecretOwnerEmail": "VMOwner",
+    "External": "80b404f2-4892-480c-abd9-aecc30c975db",
+    "NSGName": "[concat(Parameters('vmNamePrefix'),'_NSG')]", 
+
+    "AllowedRDPSourceIP": "192.168.0.4",
+    "RDPAllowedSourceIPList": [
+      "192.168.0.4",
+      "192.168.0.5"
+    ],
+
+    "KeyVaultEnabledForDeployment": "false",
+    "KeyVaultEnabledForDiskEncryption" : "false",
+    "KeyVaultEnabledforTemplateDeployment": "true",
+
+    "BastionVMExtensionName": "[concat(Parameters('vmNamePrefix'),'EXT')]",
+    "PowerShellScriptFolder": ".",
+    "ChocolateyScriptBase": "[concat('https://bastionbundles.blob.core.windows.net/bundles/',Parameters('chocolateypackage'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[variables('KeyVaultInstanceName')]",
+      "apiVersion": "2016-10-01",
+      "location": "[resourceGroup().location]",
+
+      "tags": {
+        "Service": "[parameters('ServiceType')]",
+        "VMOwner": "[parameters('VMOwner')]"
+      },
+      "properties": {
+          "sku": {
+              "family": "A",
+              "name": "standard"
+          },
+          "enabledForDeployment": "[variables('KeyVaultEnabledForDeployment')]",
+          "enabledForDiskEncryption": "[variables('KeyVaultEnabledForDiskEncryption')]",
+          "enabledForTemplateDeployment": "[variables('KeyVaultEnabledforTemplateDeployment')]",
+          "tenantId": "[subscription().tenantId]",
+          "accessPolicies": [
+              {
+                  "tenantId": "[subscription().tenantId]",
+                  "objectId": "[variables('ApplianceResourceProviderObjectID')]",
+                  "permissions": {
+                      "secrets": [ "get", "list", "set", "delete" ]
+                  }
+              },
+              {
+                "tenantId": "[subscription().tenantId]",
+                "objectId": "[variables('External')]",
+                "permissions": {
+                    "secrets": [ "get", "list", "set", "delete" ]
+                }
+              },
+              {
+                "tenantId": "[reference(concat('Microsoft.Compute/virtualMachines/', parameters('vmNamePrefix')), '2017-03-30', 'Full').identity.tenantId]",
+                "objectId": "[reference(concat('Microsoft.Compute/virtualMachines/', parameters('vmNamePrefix')), '2017-03-30', 'Full').identity.principalId]",
+                "permissions": {
+                  "secrets": [ "get", "list", "set", "delete" ]
+                }
+              }
+            ]       
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', parameters('vmNamePrefix'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('KeyVaultInstanceName'), '/', variables('KeyVaultInstanceSecretUserName'))]",
+      "apiVersion": "2016-10-01",
+      "tags": {
+        "Service": "[parameters('ServiceType')]"
+      },
+      "properties": {
+          "contentType": "text/plain",
+          "attributes": {
+            "enabled": true,
+            "exp": "[parameters('Expiration')]",
+            "nbf": "[parameters('secretnotbefore')]"
+          },
+          "value": "[parameters('adminUsername')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultInstanceName'))]"
+    ]
+  },
+  {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('KeyVaultInstanceName'), '/', variables('KeyVaultInstanceSecretPasswordName'))]",
+      "apiVersion": "2016-10-01",
+      "tags": {
+        "Service": "[parameters('ServiceType')]"
+      },
+      "properties": {
+          "contentType": "text/plain",
+          "attributes": {
+            "enabled": true,
+            "exp": "[parameters('Expiration')]",
+            "nbf": "[parameters('secretnotbefore')]"
+          },
+          "value": "[parameters('adminPassword')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultInstanceName'))]"
+    ]
+
+  },
+
+  {
+    "type": "Microsoft.KeyVault/vaults/secrets",
+    "name": "[concat(variables('KeyVaultInstanceName'), '/', variables('KeyVaultInstanceSecretOwnerEmail'))]",
+    "apiVersion": "2016-10-01",
+    "tags": {
+      "Service": "[parameters('ServiceType')]"
+    },
+    "properties": {
+        "contentType": "text/plain",
+        "attributes": {
+          "enabled": true,
+          "exp": "[parameters('Expiration')]",
+          "nbf": "[parameters('secretnotbefore')]"
+        },
+        "value": "[parameters('VMOwner')]"
+    },
+    "dependsOn": [
+      "[resourceId('Microsoft.KeyVault/vaults', variables('KeyVaultInstanceName'))]"
+  ]
+
+},
+
+    {
+      "apiVersion": "2017-03-30",
+      "type": "Microsoft.Compute/disks",
+      "name": "[variables('DataDisk1Name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Service": "[parameters('ServiceType')]",
+        "Expiration": "[parameters('Expiration')]",
+        "VMOwner": "[parameters('VMOwner')]"
+      },
+      "sku": {
+      "name": "[parameters('DiskType')]"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "Copy",
+          "sourceResourceId": "[parameters('SnapshotResourceUri')]"
+      },
+      "diskSizeGB": "[variables('DataDisk1Size')]"
+    }
+  },
+  {
+    "apiVersion": "2016-09-01",
+    "type": "Microsoft.Network/networkInterfaces",
+    "name": "[variables('nicName')]",
+    "location": "[resourceGroup().location]",
+    "tags": {
+      "Service": "[parameters('ServiceType')]",
+      "Expiration": "[parameters('Expiration')]",
+      "VMOwner": "[parameters('VMOwner')]"
+    },
+    "properties": {
+      "ipConfigurations": [
+        {
+          "name": "[variables('ipconfig1_nic1')]",
+          "properties": {
+            "privateIPAllocationMethod": "Dynamic",
+            "subnet": {
+              "id": "[variables('subnetRef')]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "2017-03-30",
+    "type": "Microsoft.Compute/virtualMachines",
+    "name": "[parameters('vmNamePrefix')]",
+    "location": "[resourceGroup().location]",
+    "identity": {
+      "type": "SystemAssigned"
+      },
+    "tags": {
+      "Service": "[parameters('ServiceType')]",
+      "Expiration": "[parameters('Expiration')]",
+      "VMOwner": "[parameters('VMOwner')]",
+      "RebuildPolicy": "[parameters('BastionRebuildPolicy')]",
+      "BastionStartPolicy": "[parameters('BastionStartPolicy')]",
+      "BastionStopPolicy": "[parameters('BastionStopPolicy')]",
+      "SelfStartPolicy":   "[parameters('SelfStartPolicy')]",
+      "SelfStopPolicy":    "[parameters('SelfStopPolicy')]",
+      "SelfRebootPolicy":  "[parameters('SelfRebootPolicy')]"
+    },
+    "dependsOn": [
+      "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]",
+      "[resourceId('Microsoft.Compute/disks/', variables('DataDisk1Name'))]"
+    ],
+    "properties": {
+      "hardwareProfile": {
+        "vmSize": "[parameters('vmSize')]"
+      },
+      "osProfile": {
+        "computerName": "[parameters('vmNamePrefix')]",
+        "adminUsername": "[parameters('adminUsername')]",
+        "adminPassword": "[parameters('adminPassword')]",
+        "windowsConfiguration": {
+          "provisionVmAgent": "true"
+        }
+      },
+      "storageProfile": {
+        "imageReference": {
+          "publisher": "[variables('imagePublisher')]",
+          "offer": "[variables('imageOffer')]",
+          "sku": "[parameters('windowsOSVersion')]",
+          "version": "latest"
+        },
+        "dataDisks": [
+          {
+            "lun": 0,
+            "name": "[variables('DataDisk1Name')]",
+            "createOption": "Attach",
+            "caching": "[variables('DataDiskCachingPolicy')]",
+            "managedDisk": {
+              "id": "[resourceId('Microsoft.Compute/disks/', variables('DataDisk1Name'))]"
+            }
+          }
+        ],
+        "osDisk": {
+          "createOption": "FromImage",
+          "name": "[variables('OSDiskName')]"
+        }
+      },
+      "networkProfile": {
+        "networkInterfaces": [
+          {
+            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+          }
+        ]
+      }
+    },
+    "resources": [
+      {
+        "condition": "[not(equals(parameters('chocolateypackage'),'None'))]",
+        "apiVersion": "2018-06-01",
+        "type": "extensions",
+        "name": "[variables('BastionVMExtensionName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+          "Service": "[parameters('ServiceType')]",
+          "Expiration": "[parameters('Expiration')]",
+          "VMOwner": "[parameters('VMOwner')]",
+          "RebuildPolicy": "[parameters('BastionRebuildPolicy')]",
+          "BastionStartPolicy": "[parameters('BastionStartPolicy')]",
+          "BastionStopPolicy": "[parameters('BastionStopPolicy')]"
+        },
+        "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', parameters('vmNamePrefix'))]"
+        ],
+        "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.9",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+                "fileUris": [
+                    "[variables('ChocolateyScriptBase')]"
+                ]
+            },
+            "protectedSettings": {
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('PowerShellScriptFolder'), '/', parameters('chocolateypackage'))]"
+            }
+        }
+      }
+    ]
+  },
+  {
+    "apiVersion": "2018-11-01",
+    "type": "Microsoft.Network/networkSecurityGroups",
+    "name": "[variables('NSGName')]",
+    "location": "[resourceGroup().location]",
+    "dependsOn": [
+      "[resourceId('Microsoft.Compute/virtualMachines/', parameters('vmNamePrefix'))]"
+    ],
+    "properties": {
+      "securityRules": [
+        {
+          "name": "BastionRDPAllowRule",
+          "properties": {
+            "description": "Rule for RDP inbound protocol",
+            "protocol": "Tcp",
+            "sourcePortRange": "*",
+            "destinationPortRange": "3389",
+            "sourceAddressPrefix": "[variables('AllowedRDPSourceIP')]",
+            "destinationAddressPrefix": "[reference(concat(variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]",
+            "access": "Allow",
+            "priority": 100,
+            "direction": "Inbound"
+          }
+        },
+
+        {
+          "name": "BastionAzureLoadBalancer",
+          "properties": {
+            "description": "Rule for Azure Load balancer",
+            "protocol": "*",
+            "sourcePortRange": "*",
+            "destinationPortRange": "*",
+            "sourceAddressPrefix": "AzureLoadBalancer",
+            "destinationAddressPrefix": "*",
+            "access": "Allow",
+            "priority": 101,
+            "direction": "Inbound",
+            "sourcePortRanges": [],
+            "destinationPortRanges": [],
+            "sourceAddressPrefixes": [],
+            "destinationAddressPrefixes": []
+          }
+        },
+
+        {
+          "name": "BastionDenyAllInBound",
+          "properties": {
+            "description": "Deny all inbound traffic",
+            "protocol": "*",
+            "sourcePortRange": "*",
+            "destinationPortRange": "*",
+            "sourceAddressPrefix": "*",
+            "destinationAddressPrefix": "*",
+            "access": "Deny",
+            "priority": 102,
+            "direction": "Inbound",
+            "sourcePortRanges": [],
+            "destinationPortRanges": [],
+            "sourceAddressPrefixes": [],
+            "destinationAddressPrefixes": []
+          }
+        }
+      ]
+    }
+  }
+],
+  "outputs": {
+    "networkInterface": {
+      "type": "string",
+      "value": "[reference(concat(variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
+    }
+  }
+}

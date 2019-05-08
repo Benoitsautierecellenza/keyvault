@@ -1,0 +1,263 @@
+{
+    "handler": "Microsoft.Compute.MultiVm",
+    "version": "0.1.2-preview",
+    "parameters": {
+        "basics": [
+            {}
+        ],
+        "steps": [
+            {
+                "name": "OSImage",
+                "label" : "Available Images",
+                "subLabel":{
+                    "preValidation": "Select a Virtual machine machine",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "Virtual machine images available",
+                "elements": [
+                    {
+                        "name": "Sku",
+                        "type": "Microsoft.Common.DropDown",
+                        "label": "Select a virtual machine image",
+                        "defaultValue": "Windows 10 Build 1809",
+                        "toolTip": "Select a virtual machine image.",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "Windows 10 Build 1809",
+                                    "value": "rs5-pro"
+                                },
+                                {
+                                    "label": "Windows 10 Build 1803",
+                                    "value": "rs4-pro"
+                                },
+                                {
+                                    "label": "Windows 10 Build 1709",
+                                    "value": "rs3-pro"
+                                }
+                            ],
+                              "required": true
+                        },
+                        "visible": true
+                    }
+                ]                
+            },
+            {
+                "name": "credentialsConfig",
+                "label": "Bastion VM Credential",
+                "subLabel": {
+                    "preValidation": "Configure the VM credentials",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "Credential",
+                "elements": [
+
+                    {
+                        "name": "Owner",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Provide VM owner email Address",
+                        "defaultValue": "",
+                        "toolTip": "VM owner will be receiving notifications",
+                        "visible": true
+                    },
+                    {
+                        "name": "adminUsername",
+                        "type": "Microsoft.Compute.UserNameTextBox",
+                        "label": "User name",
+                        "toolTip": "Admin username for the virtual machine",
+                        "osPlatform": "Windows",
+                        "constraints": {
+                            "required": true
+                        }
+                    },
+                    {
+                        "name": "adminPassword",
+                        "type": "Microsoft.Compute.CredentialsCombo",
+                        "label": {
+                            "password": "Password",
+                            "confirmPassword": "Confirm password"
+                        },
+                        "toolTip": {
+                            "password": "Admin password for the virtual machine"
+                        },
+                        "osPlatform": "Windows",
+                        "constraints": {
+                            "customPasswordRegex": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$",
+                            "customValidationMessage": "The password must contain at least 8 characters",
+                            "required": true
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "vmConfig",
+                "label": "Virtual Machine settings",
+                "subLabel": {
+                    "preValidation": "Configure the virtual machine settings",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "VM Settings",
+                "elements": [
+                    {
+                        "name": "vmNamePrefix",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Virtual Machine Name",
+                        "toolTip": "Virtual machine name for jumpbox",
+                        "defaultValue": "",
+                        "constraints": {
+                            "required": true,
+                            "regex": "[a-z][a-z0-9-]{1,15}[a-z0-9]$",
+                            "validationMessage": "Must be 1-15 characters."
+                        }
+                    },
+                    {
+                        "name": "vmSize",
+                        "type": "Microsoft.Compute.SizeSelector",
+                        "label": "Virtual machine size",
+                        "toolTip": "The size of the virtual machine",
+                        "recommendedSizes": [
+                            "Standard_D2s_v3",
+                            "Standard_D4s_v3",
+                            "Standard_D8s_v3"
+                            
+                        ],
+                        "constraints": {
+                            "allowedSizes": [
+                                "Standard_D2s_v3",
+                                "Standard_D4s_v3",
+                                "Standard_D8s_v3"
+                            ]
+                        },
+                        "osPlatform": "Windows",
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "name": "BastionPolicy",
+                "label" : "Virtual Machine Start / Stop Policy",
+                "subLabel":{
+                    "preValidation": "Select a Virtual machine start/Stop Policy",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "Bastion VM Policies",
+                "elements": [
+                    {
+                        "name": "BastionStopPolicy",
+                        "type": "Microsoft.Common.DropDown",
+                        "label": "Select a Bastion VM stop Policy",
+                        "defaultValue": "8PM",
+                        "toolTip": "Virtual machine will be desalocated.",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "8PM",
+                                    "value": "8PM"
+                                },
+                                {
+                                    "label": "None",
+                                    "value": "NONE"
+                                }
+                            ],
+                              "required": true
+                        },
+                        "visible": true
+                    },
+                    {
+                        "name": "BastionStartPolicy",
+                        "type": "Microsoft.Common.DropDown",
+                        "label": "Select a Bastion VM start Policy",
+                        "defaultValue": "None",
+                        "toolTip": "Virtual machine will be started",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "8AM",
+                                    "value": "8AM"
+                                },
+                                {
+                                    "label": "None",
+                                    "value": "NONE"
+                                }
+                            ],
+                              "required": true
+                        },
+                        "visible": true
+                    },
+                    {
+                        "name": "BastionRebuildPolicy",
+                        "type": "Microsoft.Common.DropDown",
+                        "label": "Select a rebuild Policy",
+                        "defaultValue": "Yes",
+                        "toolTip": "If enabled bastion will be rebuilded automatically",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "Yes",
+                                    "value": "Yes"
+                                },
+                                {
+                                    "label": "No",
+                                    "value": "No"
+                                }
+                            ],
+                              "required": true
+                        },
+                        "visible": true
+                    }
+                ]
+            },
+            {
+                "name": "PostInstallation",
+                "label" : "Application to be installed",
+                "subLabel":{
+                    "preValidation": "Select an application to be installed",
+                    "postValidation": "Done"
+                }, 
+                "elements": [
+                    {
+                        "name": "chocolateypackage",
+                        "type": "Microsoft.Common.DropDown",
+                        "label": "Select a chocolatey package to be installed at start",
+                        "defaultValue": "None",
+                        "toolTip": "Choose your chocolatey to be installed at first start.",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "None",
+                                    "value": "None"
+                                },
+                                {
+                                    "label": "Nu",
+                                    "value": "raws.ps1"
+                                },
+                                {
+                                    "label": "Azure Dev Env",
+                                    "value": "azuredevenv.ps1"
+                                }
+                            ],
+                              "required": true
+                        },
+                        "visible": true
+                    }
+                ]
+            }
+        ],
+        "outputs": {
+            "adminUsername": "[steps('credentialsConfig').adminUsername]",
+            "vmNamePrefix": "[steps('vmConfig').vmNamePrefix]",
+            "adminPassword": "[steps('credentialsConfig').adminPassword.password]",
+            "Expiration": "[addHours(utcNow(), 168)]",
+            "VMOwner": "[steps('credentialsConfig').Owner]",
+            "BastionRebuildPolicy": "[steps('BastionPolicy').BastionRebuildPolicy]",
+            "BastionStartPolicy":"[steps('BastionPolicy').BastionStartPolicy]",
+            "BastionStopPolicy":"[steps('BastionPolicy').BastionStopPolicy]",
+            "ServiceType": "Bastion",
+            "windowsOSVersion" : "[steps('OSImage').Sku]",
+            "chocolateypackage": "[steps('PostInstallation').chocolateypackage]",
+            "SelfStartPolicy": "Yes",
+            "SelfStopPolicy": "Yes",
+            "SelfRebootPolicy": "Yes"
+        }
+    }
+}
