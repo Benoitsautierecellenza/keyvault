@@ -1,10 +1,12 @@
-# Generate secret URL
 # Send mail to vm owner with secrets URL is allowed
 #
 # Input : Managed Application Name
 #
+# Revoir car le Input, c'est la souscription, le resource group et la VM
+#
+#
 Param(
-    [String]$ManagedApplicationName = "BastionBuildd7c1434527574ab9880106f482724107"
+    [String]$ManagedApplicationName = "BastionBuild68cdbeb03c4545a391d41a9ffff931e1"
 )
 $ServiceTag = @{ServiceType= "Bastion"}
 [String]$StartWebHookUriSecretName = "StartWebHookUri" 
@@ -32,15 +34,6 @@ If ($ManagedApplisationsInstances.count -GT 0)
         #
         # Process Managed Application
         # OK
-    #    "HERE0"
-    #    $ManagedApplicationNameInstance
-    #    "HERE1"
-    #    $ManagedApplicationNameInstance.Name
-    #    "HERE2"
-    #    $($ManagedApplicationInstance.Name)
-    #    "HERE3"
-    #    $ManagedApplicationName
-    #    "HERE4"
         If ($ManagedApplicationNameInstance.Name -Match $ManagedApplicationName)
         {
             #
@@ -64,6 +57,7 @@ If ($ManagedApplisationsInstances.count -GT 0)
                 #
                 # Generating new Runbook parameters
                 # OK
+                $Message = "Your bastion virtual machine just provisioned.`r`n"
                 $RunbookParameters = @{"ResourceGroupname"=$ManagedApplicationNameInstance.ResourceGroupName;"ManagedApplicationName"=$ManagedApplicationNameInstance.Name}
                 $hookParams = @{
                     'AutomationAccountName' = $AutomationAccountInstanceName;
@@ -72,34 +66,59 @@ If ($ManagedApplisationsInstances.count -GT 0)
                     'ExpiryTime'            = (get-date).AddDays($WebHookExpirationPeriod);
                     'Parameters'            = $RunbookParameters
                   }
-                  [bool]$StartWebhookPolicy = $True,
-                  [bool]$StopWebhookPolicy = $True,
-                  [bool]$RebootWebhookPolicy = $True
-                  
-                  If ($StartWebhookPolicy -eq $true)
+                  Write-Output "Self Start Policy parameter value is : $($ManagedApplicationNameInstance.Properties.parameters.selfStartPolicy.value)."
+                  If ($ManagedApplicationNameInstance.Properties.parameters.selfStartPolicy.value -eq "Yes")
                   {
+                    #
+                    # Only generate a Self Start Webhook URI if policy is enabled
+                    # OK
                     Write-Output "Generating a dedicated Webhook for $StartWebHookUriSecretName for Runbook $AutomationManagedApplicationStartVmRunbookName."
                     $webhookOutput = New-AzAutomationWebhook @hookParams -Name $((New-Guid).guid) -RunbookName $AutomationManagedApplicationStartVmRunbookName -Force
                     $SecretValue = ConvertTo-SecureString -String $webhookOutput.WebhookURI -AsPlainText -Force
                     Set-AzKeyVaultSecret -VaultName $($checkForKeyVault.VaultName) -Name $StartWebHookUriSecretName -SecretValue $SecretValue -NotBefore ((get-date).ToUniversalTime()) -Expires (get-date).AddDays($WebHookExpirationPeriod) -ContentType 'text/Plain' -Tag $ServiceTag | Out-Null
                     Write-Output "New Webhook for $StartWebHookUriSecretName Stored as secret in $($checkForKeyVault.VaultName)"
+                    $Message += "Secret URL to perform a Self-Start for your bastion is : $($webhookOutput.WebhookURI) `r`n"
                   }
-                  If ($StopWebhookPolicy -eq $True)
+                  else {
+                      Write-Output "No dedicated webhook generated for self-start because policy is disabled."
+                      $Message += "No dedicated webhook generated for self-start because policy is disabled. `r`n"
+                  }
+
+                  Write-Output "Self Start Policy parameter value is : $($ManagedApplicationNameInstance.Properties.parameters.selfStopPolicy.value)."
+                  If ($ManagedApplicationNameInstance.Properties.parameters.selfStopPolicy.value -eq "Yes")
                   {
+                    #
+                    # Only generate a Self Stop Webhook URI if policy is enabled
+                    # OK
                     Write-Output "Generating a dedicated Webhook for $StopWebHookUriSecretName for Runbook $AutomationManagedApplicationStopVmRunbookName."
                     $webhookOutput = New-AzAutomationWebhook @hookParams -Name $((New-Guid).guid) -RunbookName $AutomationManagedApplicationStopVmRunbookName -Force
                     $SecretValue = ConvertTo-SecureString -String $webhookOutput.WebhookURI -AsPlainText -Force
                     Set-AzKeyVaultSecret -VaultName $($checkForKeyVault.VaultName) -Name $StopWebHookUriSecretName -SecretValue $SecretValue -NotBefore ((get-date).ToUniversalTime()) -Expires (get-date).AddDays($WebHookExpirationPeriod) -ContentType 'text/Plain' -Tag $ServiceTag | Out-Null
                     Write-Output "New Webhook for $StopWebHookUriSecretName Stored as secret in $($checkForKeyVault.VaultName)"
+                    $Message += "Secret URL to perform a Self-Stop for your bastion is : $($webhookOutput.WebhookURI) `r`n"
                   }
-                  If ($RebootWebhookPolicy -eq $True)
+                  else {
+                    Write-Output "No dedicated webhook generated for self-stop because policy is disabled."
+                    $Message += "No dedicated webhook generated for self-stop because policy is disabled. `r`n"
+                  }
+                  Write-Output "Self Start Policy parameter value is : $($ManagedApplicationNameInstance.Properties.parameters.selfRebootPolicy.value)."
+                  If ($ManagedApplicationNameInstance.Properties.parameters.selfStopPolicy.value -eq "Yes")
                   {
+                    #
+                    # Only generate a Self Reboot Webhook URI if policy is enabled
+                    # OK
                     Write-Output "Generating a dedicated Webhook for $RebootWebHookUriSecretName for Runbook $AutomationManagedApplicationRebootVmRunbookName."
                     $webhookOutput = New-AzAutomationWebhook @hookParams -Name $((New-Guid).guid) -RunbookName $AutomationManagedApplicationRebootVmRunbookName -Force
                     $SecretValue = ConvertTo-SecureString -String $webhookOutput.WebhookURI -AsPlainText -Force
                     Set-AzKeyVaultSecret -VaultName $($checkForKeyVault.VaultName) -Name $RebootWebHookUriSecretName -SecretValue $SecretValue -NotBefore ((get-date).ToUniversalTime()) -Expires (get-date).AddDays($WebHookExpirationPeriod) -ContentType 'text/Plain' -Tag $ServiceTag | Out-Null
                     Write-Output "New Webhook for $RebootWebHookUriSecretName Stored as secret in $($checkForKeyVault.VaultName)"
+                    $Message += "Secret URL to perform a Self-Stop for your bastion is : $($webhookOutput.WebhookURI) `r`n"
                   }
+                  else {
+                    Write-Output "No dedicated webhook generated for self-reboot because policy is disabled."
+                    $Message += "No dedicated webhook generated for self-reboot because policy is disabled.`r`n"
+                  }
+                  $Message
                   #
                   # Generating Email for user
                   #
