@@ -1,0 +1,2 @@
+Compress-Archive -Path .\BUILDBastion\mainTemplate.json, .\BUILDBastion\createUiDefinition.json -DestinationPath C:\localgit\keyvault\BuildBastion.zip -Force
+Compress-Archive -Path .\REBUILDBastion\mainTemplate.json, .\REBUILDBastion\createUiDefinition.json -DestinationPath C:\localgit\keyvault\REBuildBastion.zip -force

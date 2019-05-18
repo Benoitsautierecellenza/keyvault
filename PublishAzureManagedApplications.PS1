@@ -1,5 +1,3 @@
-#Compress-Archive -Path .\BUILDBastion\mainTemplate.json, .\BUILDBastion\createUiDefinition.json -DestinationPath .\BuildBastion.zip
-#Compress-Archive -Path .\REBUILDBastion\mainTemplate.json, .\REBUILDBastion\createUiDefinition.json -DestinationPath C:\localgit\keyvault\REBuildBastion.zip -force
 #
 # Build
 #
@@ -20,8 +18,8 @@ New-AzManagedApplicationDefinition -Name $ApplicationName `
     -Location $rg.location `
     -LockLevel ReadOnly `
     -PackageFileUri $ApplicationURL `
-    -Authorization $Authorization
-$RebuildTag += @{"Rebuild"="BastionBuild,BastionReBuild"}
+    -Authorization $Authorization `
+    -Tag @{"ServiceType"= "Bastion"}
 #
 # Rebuild
 #
@@ -41,4 +39,4 @@ New-AzManagedApplicationDefinition -Name $ApplicationName `
     -LockLevel ReadOnly `
     -PackageFileUri $ApplicationURL `
     -Authorization $Authorization `
-    -Tag $RebuildTag
+    -Tag @{"ServiceType"= "Bastion"; "Rebuild" = "BastionBuild,BastionReBuild"}
